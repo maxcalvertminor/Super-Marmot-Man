@@ -6,6 +6,8 @@ using UnityEngine;
 public class PlayerMovement : MonoBehaviour
 {
     private Rigidbody2D body;
+    private DistanceJoint2D joint;
+    private LineRenderer lineRenderer;
 
     public float playerHeight;
     public float distance;
@@ -17,7 +19,7 @@ public class PlayerMovement : MonoBehaviour
     public float minimumKickSpeed;
     [SerializeField] private int chainedKicks;
 
-    public bool grounded;
+    public bool grounded, grappling;
     [SerializeField] private float groundedLockTimer;
     public float groundedLockTimerCooldown;
 
@@ -30,6 +32,9 @@ public class PlayerMovement : MonoBehaviour
     void Start()
     {
         body = GetComponent<Rigidbody2D>();
+        joint = GetComponent<DistanceJoint2D>();
+        lineRenderer = GetComponent<LineRenderer>();
+        joint.enabled = false;
     }
 
     // Update is called once per frame
@@ -58,6 +63,33 @@ public class PlayerMovement : MonoBehaviour
                 groundedLockTimer = groundedLockTimerCooldown; 
                 GetComponent<Rigidbody2D>().AddForce(new Vector2(camPos.x - transform.position.x, camPos.y - transform.position.y).normalized * kickSpeed, ForceMode2D.Impulse);
             }
+        }
+
+        if(Input.GetButtonDown("Grapple")) {
+            if(Physics2D.Raycast(transform.position, camPos - (Vector2)transform.position, Mathf.Infinity, LayerMask.GetMask("Walls"))) {
+                grappling = true;
+                RaycastHit2D hit = Physics2D.Raycast(transform.position, camPos - (Vector2)transform.position, Mathf.Infinity, LayerMask.GetMask("Walls"));
+                //Debug.Log("Grapple");
+                joint.enabled = true;
+                joint.connectedBody = hit.collider.GetComponent<Rigidbody2D>();
+                joint.connectedAnchor = hit.collider.transform.InverseTransformPoint(hit.point);
+                Debug.Log(hit.collider.gameObject);
+                Debug.Log(joint.connectedBody);
+                Debug.Log(joint.connectedAnchor);
+                lineRenderer.enabled = true;
+                lineRenderer.SetPosition(1, hit.point);
+            }
+        }
+
+        if(Input.GetButtonUp("Grapple") && grappling == true) {
+            grappling = false;
+            Debug.Log("Ungrapple");
+            joint.enabled = false;
+            lineRenderer.enabled = false;
+        }
+
+        if(grappling) {
+            lineRenderer.SetPosition(0, transform.position);
         }
         
     }
